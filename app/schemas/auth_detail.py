@@ -29,11 +29,12 @@ class AuthDetailBase(BaseModel):
                 "invalid HTTP method. Supported types: get/post/put/patch/delete"
             )
         if (
-            "spatial" not in self.api_url.lower()
-            and "nlyte" not in self.api_url.lower()
+            "spatial" not in self.server_name.lower()
+            and "nlyte" not in self.server_name.lower()
         ):
             raise ValueError(
-                "api url should contain term spatial or nlyte (just for demo purpose)"
+                "server name should contain term spatial or nlyte (just for "
+                "demo purpose because we dont use any working source endpoints here)"
             )
         if self.auth_type == enums.AuthTypeEnum.BASIC_AUTH and not all(
             [self.username, self.password]

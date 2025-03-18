@@ -76,3 +76,4 @@ class SpatialUpdate(SpatialBase):
 
 class SpatialInDb(SpatialBase):
     hub_id: str
+    tid: Optional[str]

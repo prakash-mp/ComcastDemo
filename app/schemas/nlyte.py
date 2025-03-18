@@ -95,3 +95,4 @@ class NlyteUpdate(NlyteBase):
 
 class NlyteInDb(NlyteBase):
     hub_id: str
+    tid: Optional[str]

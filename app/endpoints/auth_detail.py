@@ -11,7 +11,7 @@ from app import models, schemas, log
 from app.dependencies import deps
 
 
-router = APIRouter(tags=["Auth Detail"])
+router = APIRouter(tags=["Server Onboard"])
 
 
 @router.post("/auth_detail")

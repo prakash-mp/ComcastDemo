@@ -1,6 +1,7 @@
 from typing import Union
 
-from sqlalchemy import Column, Integer, String, Text, Float, DateTime, func
+from sqlalchemy import Column, Integer, String, Text, Float, DateTime, func, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB
 
 from app import schemas
@@ -32,6 +33,12 @@ class Comcast(Base):
     createdBy = Column(String(length=250), nullable=True)
     modifiedBy = Column(String(length=250), nullable=True)
 
+    # Reference to order_id in the Transaction table
+    tid = Column(String(length=250), ForeignKey("transaction.tid"), nullable=True)
+
+    # Define the relationship with Transaction based on order_id
+    transaction = relationship("Transaction", back_populates="comcasts")
+
     @classmethod
     def from_schema(cls, schema: Union[schemas.ComcastCreate, schemas.ComcastUpdate]):
         return cls(
@@ -62,6 +69,7 @@ class Comcast(Base):
     def to_schema(self):
         data = {
             "hub_id": self.hub_id,
+            "tid": self.tid,
             "partner": self.partner,
             "hub": {
                 "hubCode": self.hubCode,
@@ -112,6 +120,12 @@ class Spatial(Base):
     signal_strength_dbm = Column(Float, nullable=False)
     network_type = Column(String(length=250), nullable=False)
 
+    # Reference to order_id in the Transaction table
+    tid = Column(String(length=250), ForeignKey("transaction.tid"), nullable=True)
+
+    # Define the relationship with Transaction based on order_id
+    transaction = relationship("Transaction", back_populates="spatials")
+
     @classmethod
     def from_schema(
         cls, schema: Union[schemas.SpatialCreate, schemas.SpatialUpdate], hub_id: str
@@ -140,6 +154,7 @@ class Spatial(Base):
     def to_schema(self):
         data = {
             "hub_id": self.hub_id,
+            "tid": self.tid,
             "name": self.name,
             "region": self.region,
             "location": {
@@ -198,6 +213,12 @@ class Nlyte(Base):
     cooling_unit_status = Column(String(length=250), nullable=False)
     cooling_unit_location = Column(String(length=250), nullable=False)
 
+    # Reference to order_id in the Transaction table
+    tid = Column(String(length=250), ForeignKey("transaction.tid"), nullable=True)
+
+    # Define the relationship with Transaction based on order_id
+    transaction = relationship("Transaction", back_populates="nlytes")
+
     @classmethod
     def from_schema(
         cls, schema: Union[schemas.NlyteCreate, schemas.NlyteUpdate], hub_id: str
@@ -232,6 +253,7 @@ class Nlyte(Base):
     def to_schema(self):
         data = {
             "hub_id": self.hub_id,
+            "tid": self.tid,
             "dc_id": self.dc_id,
             "name": self.name,
             "location": {
@@ -352,8 +374,7 @@ class Transaction(Base):
     __tablename__ = "transaction"
 
     id = Column(Integer, primary_key=True, autoincrement=True, index=True, default=None)
-    order_id = Column(String(length=250), nullable=False)
-    hub_id = Column(String(length=250), nullable=False)
+    tid = Column(String(length=250), nullable=False, unique=True)
     order_status = Column(String(length=250), nullable=False)
 
     created_by = Column(String(length=250), nullable=True)
@@ -361,13 +382,17 @@ class Transaction(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     modified_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    # Define the relationship with Nlyte (many-to-one from Nlyte to Transaction based on order_id)
+    nlytes = relationship("Nlyte", back_populates="transaction")
+    spatials = relationship("Spatial", back_populates="transaction")
+    comcasts = relationship("Comcast", back_populates="transaction")
+
     @classmethod
     def from_schema(
         cls, schema: Union[schemas.TransactionCreate, schemas.TransactionUpdate]
     ):
         return cls(
-            order_id=schema.order_id,
-            hub_id=schema.hub_id,
+            tid=schema.tid,
             order_status=schema.order_status,
             created_by=schema.created_by,
             modified_by=schema.modified_by,

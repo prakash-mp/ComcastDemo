@@ -1,5 +1,6 @@
 from typing import List
 from io import BytesIO
+from uuid import uuid4
 
 from fastapi import Depends, status, File, UploadFile
 from fastapi.encoders import jsonable_encoder
@@ -67,6 +68,15 @@ async def create_custom_hub(
             )
 
         db_objs = []
+        tmp = {
+            "tid": str(uuid4()),
+            "order_status": "completed",
+            "created_by": "user",
+            "modified_by": "user",
+        }
+        transaction_payload = schemas.TransactionCreate(**tmp)
+        db_obj_transaction = models.Transaction.from_schema(transaction_payload)
+        db.add(db_obj_transaction)
         for row in sheet.iter_rows(min_row=2, values_only=True):
             # Each row is a tuple, where each value corresponds to a cell in that row
             row_data = dict(zip(headers, row))
@@ -111,6 +121,7 @@ async def create_custom_hub(
 
             data_in = schemas.ComcastCreate(**hub_data)
             db_obj = models.Comcast.from_schema(data_in)
+            db_obj.tid = db_obj_transaction.tid
             db.add(db_obj)
             db_objs.append(db_obj)
 
@@ -124,7 +135,8 @@ async def create_custom_hub(
             content={
                 "code": 201,
                 "status": "OK",
-                "message": [jsonable_encoder(db_obj.to_schema()) for db_obj in db_objs],
+                "message": f"records are being processed in background, tid "
+                f"{db_obj_transaction.tid} will be updated once done",
             },
         )
 

@@ -5,8 +5,7 @@ from datetime import datetime
 
 
 class TransactionBase(BaseModel):
-    order_id: str
-    hub_id: str
+    tid: str
     order_status: str
     created_by: Optional[str] = Field(None, examples=["user"])
     modified_by: Optional[str] = Field(None, examples=["user"])

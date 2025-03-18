@@ -12,11 +12,11 @@ from app import models, schemas, log
 from app.dependencies import deps
 
 
-router = APIRouter(tags=["Rogers Source Data (Spatial/Nlyte)"])
+router = APIRouter(tags=["Fetch Rogers Source Data (Spatial/Nlyte)"])
 
 
-@router.get("/source-data/{api_name}")
-def get_all_source_data(
+@router.get("/fetch/{api_name}")
+def trigger_fetch_data(
     db: Annotated[Session, Depends(deps.get_db_session)],
     api_name: str,
     page: int = Query(1, ge=1),
@@ -39,25 +39,38 @@ def get_all_source_data(
         )
 
     offset = (page - 1) * page_size
-    if "spatial" in db_obj_auth.api_url:
-        db_objs = db.query(models.Spatial).offset(offset).limit(page_size).all()
-    elif "nlyte" in db_obj_auth.api_url:
-        db_objs = db.query(models.Nlyte).offset(offset).limit(page_size).all()
+    if "spatial" in db_obj_auth.server_name.lower():
+        db_objs = (
+            db.query(models.Spatial)
+            .filter(models.Spatial.tid.is_(None))
+            .offset(offset)
+            .limit(page_size)
+            .all()
+        )
+    elif "nlyte" in db_obj_auth.server_name.lower():
+        db_objs = (
+            db.query(models.Nlyte)
+            .filter(models.Nlyte.tid.is_(None))
+            .offset(offset)
+            .limit(page_size)
+            .all()
+        )
     else:
         db_objs = []
 
-    for db_obj in db_objs:
-        tmp = {
-            "order_id": str(uuid4()),
-            "hub_id": db_obj.hub_id,
-            "order_status": "in-progress",
-            "created_by": db_obj_auth.created_by,
-            "modified_by": db_obj_auth.modified_by,
-        }
-        transaction_payload = schemas.TransactionCreate(**tmp)
-        db_obj_transaction = models.Transaction.from_schema(transaction_payload)
-        db.add(db_obj_transaction)
+    tmp = {
+        "tid": str(uuid4()),
+        "order_status": "completed",
+        "created_by": db_obj_auth.created_by,
+        "modified_by": db_obj_auth.modified_by,
+    }
+    transaction_payload = schemas.TransactionCreate(**tmp)
+    db_obj_transaction = models.Transaction.from_schema(transaction_payload)
+    db.add(db_obj_transaction)
 
+    if db_objs:
+        for db_obj in db_objs:
+            db_obj.tid = db_obj_transaction.tid
     db.commit()
 
     return JSONResponse(
@@ -65,6 +78,7 @@ def get_all_source_data(
         content={
             "code": 200,
             "status": "OK",
-            "message": [jsonable_encoder(db_obj.to_schema()) for db_obj in db_objs],
+            "message": f"records are being fetched in background, tid "
+            f"{db_obj_transaction.tid} will be updated once done",
         },
     )

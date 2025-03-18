@@ -79,4 +79,4 @@ class ComcastUpdate(ComcastBase):
 
 
 class ComcastInDb(ComcastBase):
-    pass
+    tid: Optional[str]
