@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.endpoints import (
     comcast,
@@ -24,6 +25,15 @@ app.include_router(custom.router)
 app.include_router(transformation.router)
 app.include_router(comcast.router)
 app.include_router(transaction.router)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/", include_in_schema=False)
