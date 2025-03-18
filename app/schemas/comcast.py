@@ -20,7 +20,7 @@ class Location(BaseModel):
         if len(value) != 2:
             raise ValueError("inValid Co-ordinates")
 
-        long, lat = int(value[0]), int(value[1])
+        long, lat = float(value[0]), float(value[1])
 
         if not (-180 <= long <= 180):
             raise ValueError("Invalid longitude")
@@ -47,6 +47,12 @@ class Hub(BaseModel):
     zipCode: str = Field(examples=["30047"])
     timezone: str = Field(examples=["EST"])
     location: Location
+
+    @validator("zipCode", pre=True)
+    def check_zip_code(cls, value):
+        if isinstance(value, float):
+            value = str(int(value))
+        return value
 
 
 class ComcastBase(BaseModel):

@@ -52,7 +52,9 @@ class Comcast(Base):
             zipCode=schema.hub.zipCode,
             timezone=schema.hub.timezone,
             location_type=schema.hub.location.type,
-            coordinates=", ".join(schema.hub.location.coordinates),  # long, lat
+            coordinates=", ".join(
+                [str(tmp) for tmp in schema.hub.location.coordinates]
+            ),  # long, lat
             createdBy=schema.createdBy,
             modifiedBy=schema.modifiedBy,
         )
