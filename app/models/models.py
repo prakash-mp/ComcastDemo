@@ -270,13 +270,27 @@ class Mapping(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True, index=True, default=None)
     mapping_profile = Column(String(length=250), nullable=False, unique=True)
+    server_name = Column(String(length=250), nullable=False)
     rule = Column((JSONB), nullable=False)
 
+    created_by = Column(String(length=250), nullable=True)
+    modified_by = Column(String(length=250), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    modified_at = Column(DateTime(timezone=True), server_default=func.now())
+
     @classmethod
-    def from_schema(cls, schema: Union[schemas.MappingCreate, schemas.MappingUpdate]):
+    def from_schema(
+        cls,
+        server_name: str,
+        mapping_profile: str,
+        schema: Union[schemas.MappingCreate, schemas.MappingUpdate],
+    ):
         return cls(
-            mapping_profile=schema.mapping_profile,
+            mapping_profile=mapping_profile,
+            server_name=server_name,
             rule=[rl.dict() for rl in schema.rule],
+            created_by=schema.created_by,
+            modified_by=schema.modified_by,
         )
 
     def to_schema(self):
@@ -287,7 +301,11 @@ class AuthDetail(Base):
     __tablename__ = "auth_detail"
 
     id = Column(Integer, primary_key=True, autoincrement=True, index=True, default=None)
+    server_name = Column(String(length=250), nullable=False)
+    api_name = Column(String(length=250), nullable=False)
+    api_url = Column(String(length=250), nullable=False)
     auth_type = Column(String(length=250), nullable=False)
+    http_method = Column(String(length=250), nullable=False)
     username = Column(String(length=250), nullable=True)
     password = Column(String(length=250), nullable=True)
     bearer_token = Column(String(length=250), nullable=True)
@@ -295,13 +313,23 @@ class AuthDetail(Base):
     client_id = Column(String(length=250), nullable=True)
     client_secret = Column(String(length=250), nullable=True)
     scope = Column(String(length=250), nullable=True)
+    grant_type = Column(String(length=250), nullable=True)
+
+    created_by = Column(String(length=250), nullable=True)
+    modified_by = Column(String(length=250), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    modified_at = Column(DateTime(timezone=True), server_default=func.now())
 
     @classmethod
     def from_schema(
         cls, schema: Union[schemas.AuthDetailCreate, schemas.AuthDetailUpdate]
     ):
         return cls(
+            server_name=schema.server_name,
             auth_type=schema.auth_type,
+            http_method=schema.http_method,
+            api_name=f"{schema.server_name.lower()}-{schema.http_method.lower()}",
+            api_url=schema.api_url,
             username=schema.username,
             password=schema.password,
             bearer_token=schema.bearer_token,
@@ -309,6 +337,9 @@ class AuthDetail(Base):
             client_id=schema.client_id,
             client_secret=schema.client_secret,
             scope=schema.scope,
+            grant_type=schema.grant_type,
+            created_by=schema.created_by,
+            modified_by=schema.modified_by,
         )
 
     def to_schema(self):
@@ -320,9 +351,13 @@ class Transaction(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True, index=True, default=None)
     order_id = Column(String(length=250), nullable=False)
-    submitted_by = Column(String(length=250), nullable=False)
+    hub_id = Column(String(length=250), nullable=False)
     order_status = Column(String(length=250), nullable=False)
+
+    created_by = Column(String(length=250), nullable=True)
+    modified_by = Column(String(length=250), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    modified_at = Column(DateTime(timezone=True), server_default=func.now())
 
     @classmethod
     def from_schema(
@@ -330,8 +365,10 @@ class Transaction(Base):
     ):
         return cls(
             order_id=schema.order_id,
-            submitted_by=schema.submitted_by,
+            hub_id=schema.hub_id,
             order_status=schema.order_status,
+            created_by=schema.created_by,
+            modified_by=schema.modified_by,
         )
 
     def to_schema(self):

@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import Depends, status
+from fastapi import Depends, status, Query
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRouter
@@ -13,27 +13,48 @@ from app.dependencies import deps
 router = APIRouter(tags=["Mapping"])
 
 
-@router.post("/mappings")
+@router.post("/mappings/{mapping_profile}/{server_name}")
 def create_mapping(
-    db: Annotated[Session, Depends(deps.get_db_session)], data_in: schemas.MappingCreate
+    db: Annotated[Session, Depends(deps.get_db_session)],
+    mapping_profile: str,
+    server_name: str,
+    data_in: schemas.MappingCreate,
 ):
     db_obj = (
+        db.query(models.AuthDetail)
+        .filter(models.AuthDetail.server_name == server_name)
+        .first()
+    )
+    if not db_obj:
+        log.info(f"No Record found for server name {server_name}")
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={
+                "code": 404,
+                "status": "Not found",
+                "message": "Server name not found",
+            },
+        )
+
+    db_obj = (
         db.query(models.Mapping)
-        .filter(models.Mapping.mapping_profile == data_in.mapping_profile)
+        .filter(models.Mapping.mapping_profile == mapping_profile)
         .first()
     )
     if db_obj:
-        log.info(f"Record already exists for mapping profile {data_in.mapping_profile}")
+        log.info(f"Record already exists for mapping profile {mapping_profile}")
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT,
             content={"code": 409, "status": "Conflict", "message": "Error"},
         )
 
-    db_obj = models.Mapping.from_schema(data_in)
+    db_obj = models.Mapping.from_schema(
+        server_name=server_name, mapping_profile=mapping_profile, schema=data_in
+    )
 
     db.add(db_obj)
     db.commit()
-    log.info(f"Record created for mapping profile {data_in.mapping_profile}")
+    log.info(f"Record created for mapping profile {mapping_profile}")
     return JSONResponse(
         status_code=status.HTTP_201_CREATED,
         content={
@@ -78,8 +99,13 @@ def get_mapping(
 @router.get("/mappings")
 def get_all_mapping(
     db: Annotated[Session, Depends(deps.get_db_session)],
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1),
 ):
-    db_objs: List[models.Mapping] = db.query(models.Mapping).all()
+    offset = (page - 1) * page_size
+    db_objs: List[models.Mapping] = (
+        db.query(models.Mapping).offset(offset).limit(page_size).all()
+    )
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -114,7 +140,7 @@ def update_mapping(
         )
 
     obj_data = jsonable_encoder(db_obj)
-    data_in = data_in.dict()
+    data_in = jsonable_encoder(data_in)
     for attribute in obj_data:
         if attribute in data_in:
             setattr(db_obj, attribute, data_in[attribute])

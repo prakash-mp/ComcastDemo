@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import Depends, status
+from fastapi import Depends, status, Query
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRouter
@@ -19,6 +19,23 @@ def create_auth(
     db: Annotated[Session, Depends(deps.get_db_session)],
     data_in: schemas.AuthDetailCreate,
 ):
+    api_name = f"{data_in.server_name.lower()}-{data_in.http_method.lower()}"
+    db_obj = (
+        db.query(models.AuthDetail)
+        .filter(models.AuthDetail.api_name == api_name.lower())
+        .first()
+    )
+    if db_obj:
+        log.info(f"Record already exists for server_name-http_method {api_name}")
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={
+                "code": 404,
+                "status": "Conflict",
+                "message": "Error",
+            },
+        )
+
     db_obj = models.AuthDetail.from_schema(schema=data_in)
 
     db.add(db_obj)
@@ -36,14 +53,15 @@ def create_auth(
     )
 
 
-@router.get("/auth_detail/{auth_id}")
-def get_auth(
-    db: Annotated[Session, Depends(deps.get_db_session)],
-    auth_id: int,
-):
-    db_obj = db.query(models.AuthDetail).filter(models.AuthDetail.id == auth_id).first()
+@router.get("/auth_detail/{api_name}")
+def get_auth(db: Annotated[Session, Depends(deps.get_db_session)], api_name: str):
+    db_obj = (
+        db.query(models.AuthDetail)
+        .filter(models.AuthDetail.api_name == api_name.lower())
+        .first()
+    )
     if not db_obj:
-        log.info(f"No record found for auth_id {auth_id}")
+        log.info(f"No record found for api_name {api_name}")
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,
             content={
@@ -66,8 +84,13 @@ def get_auth(
 @router.get("/auth_detail")
 def get_all_auth(
     db: Annotated[Session, Depends(deps.get_db_session)],
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1),
 ):
-    db_objs: List[models.AuthDetail] = db.query(models.AuthDetail).all()
+    offset = (page - 1) * page_size
+    db_objs: List[models.AuthDetail] = (
+        db.query(models.AuthDetail).offset(offset).limit(page_size).all()
+    )
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -79,17 +102,19 @@ def get_all_auth(
     )
 
 
-@router.put("/auth_detail/{auth_id}")
+@router.put("/auth_detail/{api_name}")
 def update_auth(
     db: Annotated[Session, Depends(deps.get_db_session)],
     data_in: schemas.AuthDetailUpdate,
-    auth_id: int,
+    api_name: str,
 ):
     db_obj: models.AuthDetail = (
-        db.query(models.AuthDetail).filter(models.AuthDetail.id == auth_id).first()
+        db.query(models.AuthDetail)
+        .filter(models.AuthDetail.api_name == api_name.lower())
+        .first()
     )
     if not db_obj:
-        log.info(f"No record found for auth_id {auth_id}")
+        log.info(f"No record found for api {api_name}")
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,
             content={
@@ -108,7 +133,7 @@ def update_auth(
     db.add(db_obj)
     db.commit()
     db.refresh(db_obj)
-    log.info(f"Record updated for auth_id {auth_id}")
+    log.info(f"Record updated for api {api_name}")
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
@@ -119,14 +144,18 @@ def update_auth(
     )
 
 
-@router.delete("/auth_detail/{auth_id}")
+@router.delete("/auth_detail/{api_name}")
 def delete_auth(
     db: Annotated[Session, Depends(deps.get_db_session)],
-    auth_id: int,
+    api_name: str,
 ):
-    db_obj = db.query(models.AuthDetail).filter(models.AuthDetail.id == auth_id).first()
+    db_obj = (
+        db.query(models.AuthDetail)
+        .filter(models.AuthDetail.api_name == api_name.lower())
+        .first()
+    )
     if not db_obj:
-        log.info(f"No record found for auth_id {auth_id}")
+        log.info(f"No record found for api {api_name}")
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,
             content={
@@ -138,5 +167,5 @@ def delete_auth(
 
     db.delete(db_obj)
     db.commit()
-    log.info(f"Record deleted for auth_id {auth_id}")
+    log.info(f"Record deleted for api {api_name}")
     return status.HTTP_204_NO_CONTENT

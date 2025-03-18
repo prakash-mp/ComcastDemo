@@ -1,4 +1,5 @@
 from typing import Optional
+from datetime import datetime
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -6,17 +7,34 @@ from app.utils import enums
 
 
 class AuthDetailBase(BaseModel):
+    server_name: str
     auth_type: enums.AuthTypeEnum
+    http_method: str
+    api_url: str
     username: Optional[str] = Field(None)
     password: Optional[str] = Field(None)
     bearer_token: Optional[str] = Field(None)
     auth_url: Optional[str] = Field(None)
+    grant_type: Optional[str] = Field(None)
     client_id: Optional[str] = Field(None)
     client_secret: Optional[str] = Field(None)
     scope: Optional[str] = Field(None)
+    created_by: Optional[str] = Field(None, examples=["user"])
+    modified_by: Optional[str] = Field(None, examples=["user"])
 
     @model_validator(mode="after")
     def validate_attributes(self):
+        if self.http_method.lower() not in ["get", "post", "put", "patch", "delete"]:
+            raise ValueError(
+                "invalid HTTP method. Supported types: get/post/put/patch/delete"
+            )
+        if (
+            "spatial" not in self.api_url.lower()
+            and "nlyte" not in self.api_url.lower()
+        ):
+            raise ValueError(
+                "api url should contain term spatial or nlyte (just for demo purpose)"
+            )
         if self.auth_type == enums.AuthTypeEnum.BASIC_AUTH and not all(
             [self.username, self.password]
         ):
@@ -45,6 +63,9 @@ class AuthDetailUpdate(AuthDetailBase):
 
 class AuthDetailInDb(AuthDetailBase):
     id: int
+    api_name: str
+    created_at: datetime
+    modified_at: datetime
 
     class Config:
         from_attributes = True
