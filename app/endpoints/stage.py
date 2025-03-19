@@ -139,6 +139,61 @@ def get_staged_data_for_mapping_profile(
     )
 
 
+@router.get("/stage/{source_name}")
+def get_staged_data_for_source_name(
+    db: Annotated[Session, Depends(deps.get_db_session)],
+    source_name: str,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1),
+):
+    offset = (page - 1) * page_size
+    if source_name.lower() == "custom":
+        db_objs = (
+            db.query(models.Comcast)
+            .filter(models.Comcast.transaction.has(order_type="fetch"))
+            .offset(offset)
+            .limit(page_size)
+            .all()
+        )
+    elif source_name.lower() == "spatial":
+        db_objs = (
+            db.query(models.Spatial)
+            .filter(models.Spatial.transaction.has(order_type="fetch"))
+            .offset(offset)
+            .limit(page_size)
+            .all()
+        )
+    elif source_name.lower() == "nlyte":
+        db_objs = (
+            db.query(models.Nlyte)
+            .filter(models.Nlyte.transaction.has(order_type="fetch"))
+            .offset(offset)
+            .limit(page_size)
+            .all()
+        )
+    else:
+        log.info(
+            f"Source name {source_name} not allowed. Allowed sources: spatial/nlyte/custom"
+        )
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={
+                "code": 404,
+                "status": "Not found",
+                "message": f"Source name {source_name} not allowed. Allowed sources: spatial/nlyte/custom",
+            },
+        )
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "code": 200,
+            "status": "OK",
+            "message": [jsonable_encoder(db_obj.to_schema()) for db_obj in db_objs],
+        },
+    )
+
+
 @router.post("/stage/transform/{mapping_profile}")
 def transform(
     db: Annotated[Session, Depends(deps.get_db_session)],

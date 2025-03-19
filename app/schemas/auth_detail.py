@@ -31,9 +31,10 @@ class AuthDetailBase(BaseModel):
         if (
             "spatial" not in self.server_name.lower()
             and "nlyte" not in self.server_name.lower()
+            and "comcast" not in self.server_name.lower()
         ):
             raise ValueError(
-                "server name should contain term spatial or nlyte (just for "
+                "server name should contain term spatial or nlyte or comcast (just for "
                 "demo purpose because we dont use any working source endpoints here)"
             )
         if self.auth_type == enums.AuthTypeEnum.BASIC_AUTH and not all(
