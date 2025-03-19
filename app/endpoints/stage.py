@@ -1,9 +1,11 @@
+from typing import List
+from uuid import uuid4
+
 from fastapi import Depends, status, Query
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRouter
 from sqlalchemy.orm import Session
-from pydantic import ValidationError
 from typing_extensions import Annotated
 
 from app import models, schemas, log
@@ -15,7 +17,7 @@ router = APIRouter(tags=["Stage"])
 
 
 @router.get("/stage/{mapping_profile}/{tid}")
-def get_staged_data(
+def get_staged_data_mapping_profile_and_tid(
     db: Annotated[Session, Depends(deps.get_db_session)],
     mapping_profile: str,
     tid: str,
@@ -137,12 +139,28 @@ def get_staged_data_for_mapping_profile(
     )
 
 
-@router.post("/transform/nlyte/{mapping_profile}")
-def transform_nlyte(
+@router.post("/stage/transform/{mapping_profile}")
+def transform(
     db: Annotated[Session, Depends(deps.get_db_session)],
-    data_in: schemas.NlyteInDb,
+    hub_ids: List[str],
     mapping_profile: str,
 ):
+    tmp = {
+        "tid": str(uuid4()),
+        "order_type": "stage",
+        "order_status": "completed",
+        "created_by": "user",
+        "modified_by": "user",
+    }
+    transaction_payload = schemas.TransactionCreate(**tmp)
+    db_obj_transaction = models.Transaction.from_schema(transaction_payload)
+    db.add(db_obj_transaction)
+
+    if mapping_profile.lower() == "custom":
+        db_objs = (
+            db.query(models.Comcast).filter(models.Comcast.hub_id.in_(hub_ids)).all()
+        )
+
     db_obj_mapping = (
         db.query(models.Mapping)
         .filter(models.Mapping.mapping_profile == mapping_profile)
@@ -159,139 +177,51 @@ def transform_nlyte(
             },
         )
 
-    db_obj = (
-        db.query(models.Nlyte).filter(models.Nlyte.hub_id == data_in.hub_id).first()
-    )
-    if not db_obj:
-        log.info(f"No record found for given hub_id {data_in.hub_id}")
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={
-                "code": 404,
-                "status": "Not found",
-                "message": "Error",
-            },
+    if "spatial" in db_obj_mapping.server_name.lower():
+        db_objs = (
+            db.query(models.Spatial).filter(models.Spatial.hub_id.in_(hub_ids)).all()
         )
 
-    try:
-        mapped_data: schemas.ComcastCreate = mapper.do_mapping(
-            data_in=data_in, db_obj_mapping=db_obj_mapping
-        )
-    except Exception as exc:
-        raise ValidationError(exc)
+    elif "nlyte" in db_obj_mapping.server_name.lower():
+        db_objs = db.query(models.Nlyte).filter(models.Nlyte.hub_id.in_(hub_ids)).all()
 
-    db_obj: models.Comcast = models.Comcast.from_schema(mapped_data)
-    db.add(db_obj)
+    else:
+        db_objs = []
+
+    processed_hub_ids = []
+    for db_obj in db_objs:
+        if (
+            db_obj.transaction.order_type == "fetch"
+            and db_obj_transaction.order_status == "completed"
+        ):
+            if mapping_profile.lower() != "custom":
+                source_data = db_obj.to_schema()
+                try:
+                    mapped_data: schemas.ComcastCreate = mapper.do_mapping(
+                        data_in=source_data, db_obj_mapping=db_obj_mapping
+                    )
+                except Exception as exc:
+                    log.info(f"mapping error for hub id: {db_obj.hub_id}: {exc}")
+                    continue
+
+                db_obj_mapped: models.Comcast = models.Comcast.from_schema(mapped_data)
+                db.add(db_obj_mapped)
+
+            db_obj.tid = db_obj_transaction.tid
+            processed_hub_ids.append(db_obj.hub_id)
+
+            log.info(
+                f"Transformation done from source to comcast for hub_id {db_obj.hub_id}"
+            )
+
     db.commit()
-    log.info(f"Transformation done from nlyte to Comcast for hub_id {data_in.hub_id}")
+
     return JSONResponse(
         status_code=status.HTTP_201_CREATED,
         content={
             "code": 201,
             "status": "OK",
-            "message": jsonable_encoder(db_obj.to_schema()),
-        },
-    )
-
-
-@router.post("/transform/spatial/{mapping_profile}")
-def transform_spatial(
-    db: Annotated[Session, Depends(deps.get_db_session)],
-    data_in: schemas.SpatialInDb,
-    mapping_profile: str,
-):
-    db_obj_mapping = (
-        db.query(models.Mapping)
-        .filter(models.Mapping.mapping_profile == mapping_profile)
-        .first()
-    )
-    if not db_obj_mapping:
-        log.info(f"No mapping record found for given mapping profile {mapping_profile}")
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={
-                "code": 404,
-                "status": "Not found",
-                "message": "Mapping profile does not exist",
-            },
-        )
-
-    db_obj = (
-        db.query(models.Nlyte).filter(models.Nlyte.hub_id == data_in.hub_id).first()
-    )
-    if not db_obj:
-        log.info(f"No record found for given hub_id {data_in.hub_id}")
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={
-                "code": 404,
-                "status": "Not found",
-                "message": "Error",
-            },
-        )
-
-    try:
-        mapped_data: schemas.ComcastCreate = mapper.do_mapping(
-            data_in=data_in, db_obj_mapping=db_obj_mapping
-        )
-    except Exception as exc:
-        raise ValidationError(exc)
-
-    db_obj: models.Comcast = models.Comcast.from_schema(mapped_data)
-    db.add(db_obj)
-    db.commit()
-    log.info(f"Transformation done from spatial to Comcast for hub_id {data_in.hub_id}")
-    return JSONResponse(
-        status_code=status.HTTP_201_CREATED,
-        content={
-            "code": 201,
-            "status": "OK",
-            "message": jsonable_encoder(db_obj.to_schema()),
-        },
-    )
-
-
-@router.post("/transform/custom/{mapping_profile}")
-def transform_custom(
-    db: Annotated[Session, Depends(deps.get_db_session)],
-    data_in: schemas.ComcastInDb,
-    mapping_profile: str,
-):
-    db_obj_mapping = (
-        db.query(models.Mapping)
-        .filter(models.Mapping.mapping_profile == mapping_profile)
-        .first()
-    )
-    if not db_obj_mapping:
-        log.info(f"No mapping record found for given mapping profile {mapping_profile}")
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={
-                "code": 404,
-                "status": "Not found",
-                "message": "Mapping profile does not exist",
-            },
-        )
-
-    db_obj = (
-        db.query(models.Nlyte).filter(models.Nlyte.hub_id == data_in.hub_id).first()
-    )
-    if not db_obj:
-        log.info(f"No record found for given hub_id {data_in.hub_id}")
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={
-                "code": 404,
-                "status": "Not found",
-                "message": "Error",
-            },
-        )
-    log.info(f"Transformation done from custom to Comcast for hub_id {data_in.hub_id}")
-    return JSONResponse(
-        status_code=status.HTTP_201_CREATED,
-        content={
-            "code": 201,
-            "status": "OK",
-            "message": jsonable_encoder(db_obj.to_schema()),
+            "message": f"hub ids {processed_hub_ids} found valid & transformation "
+            f"initiated in background, tid {db_obj_transaction.tid} will be updated once done",
         },
     )
