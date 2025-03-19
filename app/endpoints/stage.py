@@ -156,17 +156,12 @@ def transform(
     db_obj_transaction = models.Transaction.from_schema(transaction_payload)
     db.add(db_obj_transaction)
 
-    if mapping_profile.lower() == "custom":
-        db_objs = (
-            db.query(models.Comcast).filter(models.Comcast.hub_id.in_(hub_ids)).all()
-        )
-
     db_obj_mapping = (
         db.query(models.Mapping)
         .filter(models.Mapping.mapping_profile == mapping_profile)
         .first()
     )
-    if not db_obj_mapping:
+    if not db_obj_mapping and mapping_profile.lower() != "custom":
         log.info(f"No mapping record found for given mapping profile {mapping_profile}")
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -177,16 +172,18 @@ def transform(
             },
         )
 
-    if "spatial" in db_obj_mapping.server_name.lower():
+    if db_obj_mapping and "spatial" in db_obj_mapping.server_name.lower():
         db_objs = (
             db.query(models.Spatial).filter(models.Spatial.hub_id.in_(hub_ids)).all()
         )
 
-    elif "nlyte" in db_obj_mapping.server_name.lower():
+    elif db_obj_mapping and "nlyte" in db_obj_mapping.server_name.lower():
         db_objs = db.query(models.Nlyte).filter(models.Nlyte.hub_id.in_(hub_ids)).all()
 
     else:
-        db_objs = []
+        db_objs = (
+            db.query(models.Comcast).filter(models.Comcast.hub_id.in_(hub_ids)).all()
+        )
 
     processed_hub_ids = []
     for db_obj in db_objs:
