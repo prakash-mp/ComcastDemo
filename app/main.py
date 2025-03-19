@@ -3,7 +3,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.endpoints import (
-    comcast,
+    commit,
     nlyte,
     custom,
     mapping,
@@ -22,7 +22,7 @@ app.include_router(mapping.router)
 app.include_router(fetch.router)
 app.include_router(custom.router)
 app.include_router(stage.router)
-app.include_router(comcast.router)
+app.include_router(commit.router)
 app.include_router(transaction.router)
 
 

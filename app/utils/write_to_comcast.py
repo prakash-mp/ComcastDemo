@@ -1,0 +1,3 @@
+def do_write(hub_id: str):
+    # comcast create data related ....
+    return
