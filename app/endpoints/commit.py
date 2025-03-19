@@ -1,7 +1,7 @@
 from typing import List
 from uuid import uuid4
 
-from fastapi import Depends, status
+from fastapi import Depends, status, Query
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.routing import APIRouter
@@ -79,5 +79,55 @@ def get_commit(db: Annotated[Session, Depends(deps.get_db_session)], hub_id: str
             "code": 404,
             "status": "Not found",
             "message": "Error",
+        },
+    )
+
+
+@router.get("/commit")
+def get_all_to_be_committed(
+    db: Annotated[Session, Depends(deps.get_db_session)],
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1),
+):
+    offset = (page - 1) * page_size
+    db_objs = (
+        db.query(models.Comcast)
+        .filter(models.Comcast.tid.is_(None))
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "code": 200,
+            "status": "OK",
+            "message": [jsonable_encoder(db_obj.to_schema()) for db_obj in db_objs],
+        },
+    )
+
+
+@router.get("/committed")
+def get_all_committed(
+    db: Annotated[Session, Depends(deps.get_db_session)],
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1),
+):
+    offset = (page - 1) * page_size
+    db_objs = (
+        db.query(models.Comcast)
+        .filter(models.Comcast.transaction.has(order_type="commit"))
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "code": 200,
+            "status": "OK",
+            "message": [jsonable_encoder(db_obj.to_schema()) for db_obj in db_objs],
         },
     )
