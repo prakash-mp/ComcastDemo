@@ -190,6 +190,50 @@ def get_all_custom_hub(db: Annotated[Session, Depends(deps.get_db_session)]):
     )
 
 
+@router.put("/custom/hubs")
+def create_manual_custom_hub(
+    db: Annotated[Session, Depends(deps.get_db_session)],
+    data_in: schemas.ComcastCreate,
+):
+    db_obj = (
+        db.query(models.Comcast).filter(models.Comcast.hub_id == data_in.hub_id).first()
+    )
+    if db_obj:
+        log.info(f"Record already exists for hub_id {data_in.hub_id}")
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={
+                "code": 409,
+                "status": "Conflict",
+                "message": f"Record already exists for hub_id {data_in.hub_id}",
+            },
+        )
+    tmp = {
+        "tid": str(uuid4()),
+        "order_type": "fetch",
+        "order_status": "completed",
+        "created_by": "user",
+        "modified_by": "user",
+    }
+    transaction_payload = schemas.TransactionCreate(**tmp)
+    db_obj_transaction = models.Transaction.from_schema(transaction_payload)
+    db.add(db_obj_transaction)
+
+    db_obj = models.Comcast.from_schema(data_in)
+    db_obj.tid = db_obj_transaction.tid
+    db.add(db_obj)
+    db.commit()
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "code": 200,
+            "status": "OK",
+            "message": jsonable_encoder(db_obj.to_schema()),
+        },
+    )
+
+
 @router.patch("/custom/hubs/{hub_id}")
 def update_custom_hub(
     db: Annotated[Session, Depends(deps.get_db_session)],
