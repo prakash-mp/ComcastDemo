@@ -76,6 +76,67 @@ def get_staged_data(
     )
 
 
+@router.get("/stage/{mapping_profile}")
+def get_staged_data_for_mapping_profile(
+    db: Annotated[Session, Depends(deps.get_db_session)],
+    mapping_profile: str,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1),
+):
+    offset = (page - 1) * page_size
+    if mapping_profile.lower() == "custom":
+        db_objs = (
+            db.query(models.Comcast)
+            .filter(models.Comcast.transaction.has(order_type="fetch"))
+            .offset(offset)
+            .limit(page_size)
+            .all()
+        )
+    else:
+        db_obj_mapping: models.Mapping = (
+            db.query(models.Mapping)
+            .filter(models.Mapping.mapping_profile == mapping_profile)
+            .first()
+        )
+        if not db_obj_mapping:
+            log.info(f"Profile {mapping_profile} does not exist")
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content={
+                    "code": 404,
+                    "status": "Not found",
+                    "message": f"Profile {mapping_profile} does not exist",
+                },
+            )
+        if "spatial" in db_obj_mapping.server_name.lower():
+            db_objs = (
+                db.query(models.Spatial)
+                .filter(models.Spatial.transaction.has(order_type="fetch"))
+                .offset(offset)
+                .limit(page_size)
+                .all()
+            )
+        elif "nlyte" in db_obj_mapping.server_name.lower():
+            db_objs = (
+                db.query(models.Nlyte)
+                .filter(models.Nlyte.transaction.has(order_type="fetch"))
+                .offset(offset)
+                .limit(page_size)
+                .all()
+            )
+        else:
+            db_objs = []
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "code": 200,
+            "status": "OK",
+            "message": [jsonable_encoder(db_obj.to_schema()) for db_obj in db_objs],
+        },
+    )
+
+
 @router.post("/transform/nlyte/{mapping_profile}")
 def transform_nlyte(
     db: Annotated[Session, Depends(deps.get_db_session)],

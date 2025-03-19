@@ -7,6 +7,7 @@ from datetime import datetime
 class TransactionBase(BaseModel):
     tid: str
     order_status: str
+    order_type: str
     created_by: Optional[str] = Field(None, examples=["user"])
     modified_by: Optional[str] = Field(None, examples=["user"])
 

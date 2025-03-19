@@ -60,6 +60,7 @@ def trigger_fetch_data(
 
     tmp = {
         "tid": str(uuid4()),
+        "order_type": "fetch",
         "order_status": "completed",
         "created_by": db_obj_auth.created_by,
         "modified_by": db_obj_auth.modified_by,

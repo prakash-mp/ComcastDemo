@@ -376,6 +376,7 @@ class Transaction(Base):
     id = Column(Integer, primary_key=True, autoincrement=True, index=True, default=None)
     tid = Column(String(length=250), nullable=False, unique=True)
     order_status = Column(String(length=250), nullable=False)
+    order_type = Column(String(length=250), nullable=False)
 
     created_by = Column(String(length=250), nullable=True)
     modified_by = Column(String(length=250), nullable=True)
@@ -394,6 +395,7 @@ class Transaction(Base):
         return cls(
             tid=schema.tid,
             order_status=schema.order_status,
+            order_type=schema.order_type,
             created_by=schema.created_by,
             modified_by=schema.modified_by,
         )

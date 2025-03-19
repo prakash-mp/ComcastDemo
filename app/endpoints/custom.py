@@ -70,6 +70,7 @@ async def create_custom_hub(
         db_objs = []
         tmp = {
             "tid": str(uuid4()),
+            "order_type": "fetch",
             "order_status": "completed",
             "created_by": "user",
             "modified_by": "user",
