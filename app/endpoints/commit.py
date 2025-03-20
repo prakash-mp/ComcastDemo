@@ -36,7 +36,7 @@ def commit_to_comcast(
 
     processed_hub_ids = []
     for db_obj in db_objs:
-        if not db_obj.transaction:
+        if db_obj.transaction.order_type == "stage":
             write_to_comcast.do_write(db_obj.hub_id)  # dummy function
             db_obj.tid = db_obj_transaction.tid
             processed_hub_ids.append(db_obj.hub_id)
