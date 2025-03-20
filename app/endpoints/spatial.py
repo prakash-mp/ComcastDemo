@@ -91,7 +91,37 @@ def update_spatial_hub(
             },
         )
 
-    # tbi
+    db_obj.name = data_in.name
+    db_obj.region = data_in.region
+    db_obj.address = data_in.location.address
+    db_obj.latitude = data_in.location.latitude
+    db_obj.longitude = data_in.location.longitude
+    db_obj.power_capacity_kw = data_in.infrastructure.power_capacity_kw
+    db_obj.cooling_capacity_ton = data_in.infrastructure.cooling_capacity_ton
+    db_obj.infrastructure_type = data_in.infrastructure.infrastructure_type
+    db_obj.infrastructure_status = data_in.infrastructure.infrastructure_status
+    db_obj.infrastructure_capacity = data_in.infrastructure.infrastructure_capacity
+    db_obj.propagation_distance_km = data_in.signal_propagation.propagation_distance_km
+    db_obj.terrain_type = data_in.signal_propagation.terrain_type
+    db_obj.signal_loss_db = data_in.signal_propagation.signal_loss_db
+    db_obj.interference_level_db = data_in.signal_propagation.interference_level_db
+    db_obj.coverage_area_km2 = data_in.network_coverage.coverage_area_km2
+    db_obj.signal_strength_dbm = data_in.network_coverage.signal_strength_dbm
+    db_obj.network_type = data_in.network_coverage.network_type
+
+    db.commit()
+    db.refresh(db_obj)
+
+    log.info(f"Updated the spatial record for hub id {hub_id}")
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "code": 200,
+            "status": "OK",
+            "message": jsonable_encoder(db_obj.to_schema()),
+        },
+    )
 
 
 @router.delete("/spatial/hubs/{hub_id}")
