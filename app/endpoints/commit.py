@@ -92,7 +92,7 @@ def get_all_to_be_committed(
     offset = (page - 1) * page_size
     db_objs = (
         db.query(models.Comcast)
-        .filter(models.Comcast.tid.is_(None))
+        .filter(models.Comcast.transaction.has(order_type="stage"))
         .offset(offset)
         .limit(page_size)
         .all()

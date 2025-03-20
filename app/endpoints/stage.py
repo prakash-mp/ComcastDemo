@@ -257,6 +257,7 @@ def transform(
                     continue
 
                 db_obj_mapped: models.Comcast = models.Comcast.from_schema(mapped_data)
+                db_obj_mapped.tid = db_obj_transaction.tid
                 db.add(db_obj_mapped)
 
             db_obj.tid = db_obj_transaction.tid
