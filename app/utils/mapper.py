@@ -47,7 +47,7 @@ def do_mapping(
             "addr1": data_in.location.address,
             "addr2": data_in.location.address,
             "city": dummy.city(),
-            "BuhmId": "5ede4d9cf41a0058f1949bbe",
+            "BuhmId": "",
             "countryCode": dummy.country_code(),
             "locality": "locality",
             "serviceStatus": "I",

@@ -1,4 +1,5 @@
 from typing import List
+from uuid import uuid4
 
 from fastapi import Depends, status, Query
 from fastapi.responses import JSONResponse
@@ -62,15 +63,10 @@ def get_hub_vs_buhm(
         db.query(models.HubVsBuhm).filter(models.HubVsBuhm.hub_id == hub_id).first()
     )
     if not db_obj:
-        log.info(f"No record found for hub id {hub_id}")
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={
-                "code": 404,
-                "status": "Not found",
-                "message": f"No record found for hub id {hub_id}",
-            },
-        )
+        BuhmId = str(uuid4())
+        db_obj = models.HubVsBuhm(hub_id=hub_id, BuhmId=BuhmId)
+        db.add(db_obj)
+        db.commit()
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,

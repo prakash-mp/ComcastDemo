@@ -21,7 +21,7 @@ class Comcast(Base):
     addr1 = Column(Text(), nullable=False)
     addr2 = Column(Text(), nullable=True)
     city = Column(String(length=250), nullable=False)
-    BuhmId = Column(String(length=250), nullable=False)
+    BuhmId = Column(String(length=250), nullable=False, default="")
     countryCode = Column(String(length=250), nullable=False)
     locality = Column(String(length=250), nullable=False)
     serviceStatus = Column(String(length=250), nullable=False)

@@ -39,7 +39,7 @@ class Hub(BaseModel):
     addr1: str = Field(examples=["375 Rockbridge Rd NW"])
     addr2: Optional[str] = Field(None, examples=["Unit 2"])
     city: str = Field(examples=["LILBURN"])
-    BuhmId: str = Field(examples=["5ede4d9cf41a0058f1949bbe"])
+    BuhmId: str = Field(default="", examples=["5ede4d9cf41a0058f1949bbe"])
     countryCode: str = Field(examples=["CAN"])
     locality: str = Field(examples=["locality"])
     serviceStatus: str = Field(examples=["I"])
