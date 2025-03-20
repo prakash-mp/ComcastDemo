@@ -1,8 +1,12 @@
 from typing import Union
 
+import faker
 from fastapi.encoders import jsonable_encoder
 
 from app import schemas, models, log
+
+
+dummy = faker.Faker()
 
 
 def do_mapping(
@@ -37,22 +41,25 @@ def do_mapping(
         "hub_id": data_in.hub_id,
         "hub": {
             "hubCode": "GAL1",
-            "hubName": "Aurora.CO",
+            "hubName": data_in.name,
             "hubType": "primary",
             "primaryHubId": "5ede4d9cf41a0058f1949bbe",
-            "addr1": "375 Rockbridge Rd NW",
-            "addr2": "Unit 2",
-            "city": "LILBURN",
+            "addr1": data_in.location.address,
+            "addr2": data_in.location.address,
+            "city": dummy.city(),
             "BuhmId": "5ede4d9cf41a0058f1949bbe",
-            "countryCode": "CAN",
+            "countryCode": dummy.country_code(),
             "locality": "locality",
             "serviceStatus": "I",
-            "state": "GA",
-            "zipCode": "30047",
+            "state": dummy.state(),
+            "zipCode": dummy.zipcode(),
             "timezone": "EST",
-            "location": {"type": "Point", "coordinates": [-84.16322687, 33.88408157]},
+            "location": {
+                "type": "Point",
+                "coordinates": [str(dummy.longitude()), str(dummy.latitude())],
+            },
         },
-        "createdBy": "user",
-        "modifiedBy": "user",
+        "createdBy": dummy.name(),
+        "modifiedBy": dummy.name(),
     }
     return schemas.ComcastCreate(**dummy_destination_data)
