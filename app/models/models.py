@@ -401,4 +401,14 @@ class Transaction(Base):
         )
 
     def to_schema(self):
-        return schemas.TransactionInDb.validate(self)
+        tmp = schemas.TransactionInDb.validate(self)
+        if self.nlytes:
+            tmp.count = len(self.nlytes)
+        elif self.spatials:
+            tmp.count = len(self.spatials)
+        elif self.comcasts:
+            tmp.count = len(self.comcasts)
+        else:
+            tmp.count = 0
+
+        return tmp

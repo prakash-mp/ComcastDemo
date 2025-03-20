@@ -23,6 +23,7 @@ class TransactionUpdate(TransactionBase):
 class TransactionInDb(TransactionBase):
     created_at: datetime
     modified_at: datetime
+    count: int = None
 
     class Config:
         from_attributes = True
