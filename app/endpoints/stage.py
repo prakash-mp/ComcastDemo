@@ -16,7 +16,7 @@ from app.utils import mapper
 router = APIRouter(tags=["Stage"])
 
 
-@router.get("/stage/{mapping_profile}/{tid}")
+@router.get("/stage/get_by_tid/{mapping_profile}/{tid}")
 def get_staged_data_mapping_profile_and_tid(
     db: Annotated[Session, Depends(deps.get_db_session)],
     mapping_profile: str,
@@ -78,7 +78,7 @@ def get_staged_data_mapping_profile_and_tid(
     )
 
 
-@router.get("/stage/{mapping_profile}")
+@router.get("/stage/get_by_profile/{mapping_profile}")
 def get_staged_data_for_mapping_profile(
     db: Annotated[Session, Depends(deps.get_db_session)],
     mapping_profile: str,
@@ -139,7 +139,7 @@ def get_staged_data_for_mapping_profile(
     )
 
 
-@router.get("/stage/{source_name}")
+@router.get("/stage/get_by_source_name/{source_name}")
 def get_staged_data_for_source_name(
     db: Annotated[Session, Depends(deps.get_db_session)],
     source_name: str,
