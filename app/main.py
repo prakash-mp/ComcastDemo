@@ -12,6 +12,7 @@ from app.endpoints import (
     stage,
     transaction,
     fetch,
+    hub_vs_buhm,
 )
 
 app = FastAPI(title="ComcastDemo")
@@ -24,6 +25,7 @@ app.include_router(custom.router)
 app.include_router(stage.router)
 app.include_router(commit.router)
 app.include_router(transaction.router)
+app.include_router(hub_vs_buhm.router)
 
 
 app.add_middleware(

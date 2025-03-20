@@ -412,3 +412,20 @@ class Transaction(Base):
             tmp.count = 0
 
         return tmp
+
+
+class HubVsBuhm(Base):
+    __tablename__ = "hub_vs_buhm"
+
+    id = Column(Integer, primary_key=True, autoincrement=True, index=True, default=None)
+    hub_id = Column(String(length=250), nullable=False)
+    BuhmId = Column(String(length=250), nullable=False)
+
+    @classmethod
+    def from_schema(
+        cls, schema: Union[schemas.HubVsBuhmCreate, schemas.HubVsBuhmUpdate]
+    ):
+        return cls(hub_id=schema.hub_id, BuhmId=schema.BuhmId)
+
+    def to_schema(self):
+        return schemas.HubVsBuhmInDb.validate(self)
