@@ -52,7 +52,7 @@ class Hub(BaseModel):
     def check_zip_code(cls, value):
         if isinstance(value, float):
             value = str(int(value))
-        return value
+        return str(value)
 
 
 class ComcastBase(BaseModel):
