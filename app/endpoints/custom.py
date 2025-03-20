@@ -252,7 +252,41 @@ def update_custom_hub(
             },
         )
 
-    # tbi
+    db_obj.partner = ", ".join(data_in.partner)
+    db_obj.hubCode = data_in.hub.hubCode
+    db_obj.hubName = data_in.hub.hubName
+    db_obj.hubType = data_in.hub.hubType
+    db_obj.primaryHubId = data_in.hub.primaryHubId
+    db_obj.addr1 = data_in.hub.addr1
+    db_obj.addr2 = data_in.hub.addr2
+    db_obj.city = data_in.hub.city
+    db_obj.BuhmId = data_in.hub.BuhmId
+    db_obj.countryCode = data_in.hub.countryCode
+    db_obj.locality = data_in.hub.locality
+    db_obj.serviceStatus = data_in.hub.serviceStatus
+    db_obj.state = data_in.hub.state
+    db_obj.zipCode = data_in.hub.zipCode
+    db_obj.timezone = data_in.hub.timezone
+    db_obj.location_type = data_in.hub.location.type
+    db_obj.coordinates = ", ".join(
+        [str(tmp) for tmp in data_in.hub.location.coordinates]
+    )
+    db_obj.createdBy = data_in.createdBy
+    db_obj.modifiedBy = data_in.modifiedBy
+
+    db.commit()
+    db.refresh(db_obj)
+
+    log.info(f"comcast data updated for hub id {hub_id}")
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "code": 200,
+            "status": "OK",
+            "message": jsonable_encoder(db_obj.to_schema()),
+        },
+    )
 
 
 @router.delete("/custom/hubs/{hub_id}")
