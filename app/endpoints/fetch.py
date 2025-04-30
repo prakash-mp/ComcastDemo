@@ -38,30 +38,24 @@ def trigger_fetch_data(
             },
         )
 
-    offset = (page - 1) * page_size
-    if "spatial" in db_obj_auth.server_name.lower():
-        db_objs = (
-            db.query(models.Spatial)
-            .filter(models.Spatial.tid.is_(None))
-            .offset(offset)
-            .limit(page_size)
-            .all()
+    if (
+        "spatial" not in db_obj_auth.server_name.lower()
+        or "nlyte" not in db_obj_auth.server_name.lower()
+    ):
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={
+                "code": 404,
+                "status": "Error",
+                "message": f"Given api {api_name} does not belong to any of "
+                f"the source server among spatial/nlyte",
+            },
         )
-    elif "nlyte" in db_obj_auth.server_name.lower():
-        db_objs = (
-            db.query(models.Nlyte)
-            .filter(models.Nlyte.tid.is_(None))
-            .offset(offset)
-            .limit(page_size)
-            .all()
-        )
-    else:
-        db_objs = []
 
     tmp = {
         "tid": str(uuid4()),
         "order_type": "fetch",
-        "order_status": "completed",
+        "order_status": "in-progress",
         "created_by": db_obj_auth.created_by,
         "modified_by": db_obj_auth.modified_by,
     }
@@ -69,9 +63,6 @@ def trigger_fetch_data(
     db_obj_transaction = models.Transaction.from_schema(transaction_payload)
     db.add(db_obj_transaction)
 
-    if db_objs:
-        for db_obj in db_objs:
-            db_obj.tid = db_obj_transaction.tid
     db.commit()
 
     return JSONResponse(

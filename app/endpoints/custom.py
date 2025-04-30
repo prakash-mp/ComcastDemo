@@ -71,7 +71,7 @@ async def create_custom_hub(
         tmp = {
             "tid": str(uuid4()),
             "order_type": "fetch",
-            "order_status": "completed",
+            "order_status": "in-progress",
             "created_by": "user",
             "modified_by": "user",
         }
@@ -83,10 +83,13 @@ async def create_custom_hub(
             row_data = dict(zip(headers, row))
             hub_id = row_data["hub_id"]
 
-            db_obj = (
+            db_obj_comcast = (
                 db.query(models.Comcast).filter(models.Comcast.hub_id == hub_id).first()
             )
-            if db_obj:
+            db_obj_custom = (
+                db.query(models.Custom).filter(models.Custom.hub_id == hub_id).first()
+            )
+            if db_obj_comcast or db_obj_custom:
                 log.info(f"Record already created for hub_id {hub_id}")
                 return JSONResponse(
                     status_code=status.HTTP_409_CONFLICT,
@@ -121,7 +124,7 @@ async def create_custom_hub(
             }
 
             data_in = schemas.ComcastCreate(**hub_data)
-            db_obj = models.Comcast.from_schema(data_in)
+            db_obj = models.Custom.from_schema(data_in)
             db_obj.tid = db_obj_transaction.tid
             db.add(db_obj)
             db_objs.append(db_obj)
@@ -154,7 +157,7 @@ async def create_custom_hub(
 
 @router.get("/custom/hubs/{hub_id}")
 def get_custom_hub(db: Annotated[Session, Depends(deps.get_db_session)], hub_id: str):
-    db_obj = db.query(models.Comcast).filter(models.Comcast.hub_id == hub_id).first()
+    db_obj = db.query(models.Custom).filter(models.Custom.hub_id == hub_id).first()
     if not db_obj:
         log.info(f"No record found for hub_id {hub_id}")
         return JSONResponse(
@@ -178,7 +181,7 @@ def get_custom_hub(db: Annotated[Session, Depends(deps.get_db_session)], hub_id:
 
 @router.get("/custom/hubs")
 def get_all_custom_hub(db: Annotated[Session, Depends(deps.get_db_session)]):
-    db_objs: List[models.Comcast] = db.query(models.Comcast).all()
+    db_objs: List[models.Custom] = db.query(models.Custom).all()
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -195,10 +198,13 @@ def create_manual_custom_hub(
     db: Annotated[Session, Depends(deps.get_db_session)],
     data_in: schemas.ComcastCreate,
 ):
-    db_obj = (
+    db_obj_custom = (
+        db.query(models.Custom).filter(models.Custom.hub_id == data_in.hub_id).first()
+    )
+    db_obj_comcast = (
         db.query(models.Comcast).filter(models.Comcast.hub_id == data_in.hub_id).first()
     )
-    if db_obj:
+    if db_obj_custom or db_obj_comcast:
         log.info(f"Record already exists for hub_id {data_in.hub_id}")
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT,
@@ -211,7 +217,7 @@ def create_manual_custom_hub(
     tmp = {
         "tid": str(uuid4()),
         "order_type": "fetch",
-        "order_status": "completed",
+        "order_status": "in-progress",
         "created_by": "user",
         "modified_by": "user",
     }
@@ -219,7 +225,7 @@ def create_manual_custom_hub(
     db_obj_transaction = models.Transaction.from_schema(transaction_payload)
     db.add(db_obj_transaction)
 
-    db_obj = models.Comcast.from_schema(data_in)
+    db_obj = models.Custom.from_schema(data_in)
     db_obj.tid = db_obj_transaction.tid
     db.add(db_obj)
     db.commit()
@@ -240,7 +246,7 @@ def update_custom_hub(
     hub_id: str,
     data_in: schemas.ComcastUpdate,
 ):
-    db_obj = db.query(models.Comcast).filter(models.Comcast.hub_id == hub_id).first()
+    db_obj = db.query(models.Custom).filter(models.Custom.hub_id == hub_id).first()
     if not db_obj:
         log.info(f"No record found for hub_id {hub_id}")
         return JSONResponse(
@@ -277,7 +283,7 @@ def update_custom_hub(
     db.commit()
     db.refresh(db_obj)
 
-    log.info(f"comcast data updated for hub id {hub_id}")
+    log.info(f"Custom data updated for hub id {hub_id}")
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -293,9 +299,9 @@ def update_custom_hub(
 def delete_custom_hub(
     db: Annotated[Session, Depends(deps.get_db_session)], hub_id: str
 ):
-    db_obj = db.query(models.Comcast).filter(models.Comcast.hub_id == hub_id).first()
+    db_obj = db.query(models.Custom).filter(models.Custom.hub_id == hub_id).first()
     if not db_obj:
-        log.info(f"No record found for hub_id {hub_id}")
+        log.info(f"No custom record found for hub_id {hub_id}")
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,
             content={

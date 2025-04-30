@@ -15,7 +15,7 @@ from app.dependencies import deps
 router = APIRouter(tags=["Spatial Simulator"])
 
 
-@router.post("/spatial/hubs")
+@router.post("/spatial/hubs", include_in_schema=False)
 def create_spatial_hub(
     db: Annotated[Session, Depends(deps.get_db_session)], data_in: schemas.SpatialCreate
 ):

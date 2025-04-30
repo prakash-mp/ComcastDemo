@@ -87,13 +87,7 @@ def get_staged_data_for_mapping_profile(
 ):
     offset = (page - 1) * page_size
     if mapping_profile.lower() == "custom":
-        db_objs = (
-            db.query(models.Comcast)
-            .filter(models.Comcast.transaction.has(order_type="fetch"))
-            .offset(offset)
-            .limit(page_size)
-            .all()
-        )
+        db_objs = db.query(models.Custom).offset(offset).limit(page_size).all()
     else:
         db_obj_mapping: models.Mapping = (
             db.query(models.Mapping)
@@ -111,21 +105,9 @@ def get_staged_data_for_mapping_profile(
                 },
             )
         if "spatial" in db_obj_mapping.server_name.lower():
-            db_objs = (
-                db.query(models.Spatial)
-                .filter(models.Spatial.transaction.has(order_type="fetch"))
-                .offset(offset)
-                .limit(page_size)
-                .all()
-            )
+            db_objs = db.query(models.Spatial).offset(offset).limit(page_size).all()
         elif "nlyte" in db_obj_mapping.server_name.lower():
-            db_objs = (
-                db.query(models.Nlyte)
-                .filter(models.Nlyte.transaction.has(order_type="fetch"))
-                .offset(offset)
-                .limit(page_size)
-                .all()
-            )
+            db_objs = db.query(models.Nlyte).offset(offset).limit(page_size).all()
         else:
             db_objs = []
 
@@ -148,29 +130,11 @@ def get_staged_data_for_source_name(
 ):
     offset = (page - 1) * page_size
     if source_name.lower() == "custom":
-        db_objs = (
-            db.query(models.Comcast)
-            .filter(models.Comcast.transaction.has(order_type="fetch"))
-            .offset(offset)
-            .limit(page_size)
-            .all()
-        )
+        db_objs = db.query(models.Custom).offset(offset).limit(page_size).all()
     elif source_name.lower() == "spatial":
-        db_objs = (
-            db.query(models.Spatial)
-            .filter(models.Spatial.transaction.has(order_type="fetch"))
-            .offset(offset)
-            .limit(page_size)
-            .all()
-        )
+        db_objs = db.query(models.Spatial).offset(offset).limit(page_size).all()
     elif source_name.lower() == "nlyte":
-        db_objs = (
-            db.query(models.Nlyte)
-            .filter(models.Nlyte.transaction.has(order_type="fetch"))
-            .offset(offset)
-            .limit(page_size)
-            .all()
-        )
+        db_objs = db.query(models.Nlyte).offset(offset).limit(page_size).all()
     else:
         log.info(
             f"Source name {source_name} not allowed. Allowed sources: spatial/nlyte/custom"

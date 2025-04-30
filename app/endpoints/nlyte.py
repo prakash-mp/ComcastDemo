@@ -15,7 +15,7 @@ from app.dependencies import deps
 router = APIRouter(tags=["NLType Simulator"])
 
 
-@router.post("/nlyte/hubs")
+@router.post("/nlyte/hubs", include_in_schema=False)
 def create_nlyte_hub(
     db: Annotated[Session, Depends(deps.get_db_session)], data_in: schemas.NlyteCreate
 ):

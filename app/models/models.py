@@ -97,6 +97,95 @@ class Comcast(Base):
         return schemas.ComcastInDb(**data)
 
 
+class Custom(Base):
+    __tablename__ = "custom"
+
+    id = Column(Integer, primary_key=True, autoincrement=True, index=True, default=None)
+    hub_id = Column(String(length=250), nullable=False)
+    partner = Column(String(length=250), nullable=False)
+    hubCode = Column(String(length=250), nullable=False)
+    hubName = Column(String(length=250), nullable=False)
+    hubType = Column(String(length=250), nullable=False)
+    primaryHubId = Column(String(length=250), nullable=False)
+    addr1 = Column(Text(), nullable=False)
+    addr2 = Column(Text(), nullable=True)
+    city = Column(String(length=250), nullable=False)
+    BuhmId = Column(String(length=250), nullable=False, default="")
+    countryCode = Column(String(length=250), nullable=False)
+    locality = Column(String(length=250), nullable=False)
+    serviceStatus = Column(String(length=250), nullable=False)
+    state = Column(String(length=250), nullable=False)
+    zipCode = Column(String(length=250), nullable=False)
+    timezone = Column(String(length=250), nullable=False)
+    location_type = Column(String(length=250), nullable=False)
+    coordinates = Column(String(length=250), nullable=False)
+    createdBy = Column(String(length=250), nullable=True)
+    modifiedBy = Column(String(length=250), nullable=True)
+
+    # Reference to order_id in the Transaction table
+    tid = Column(String(length=250), ForeignKey("transaction.tid"), nullable=True)
+
+    # Define the relationship with Transaction based on order_id
+    transaction = relationship("Transaction", back_populates="customs")
+
+    @classmethod
+    def from_schema(cls, schema: Union[schemas.ComcastCreate, schemas.ComcastUpdate]):
+        return cls(
+            hub_id=schema.hub_id,
+            partner=", ".join(schema.partner),
+            hubCode=schema.hub.hubCode,
+            hubName=schema.hub.hubName,
+            hubType=schema.hub.hubType,
+            primaryHubId=schema.hub.primaryHubId,
+            addr1=schema.hub.addr1,
+            addr2=schema.hub.addr2,
+            city=schema.hub.city,
+            BuhmId=schema.hub.BuhmId,
+            countryCode=schema.hub.countryCode,
+            locality=schema.hub.locality,
+            serviceStatus=schema.hub.serviceStatus,
+            state=schema.hub.state,
+            zipCode=schema.hub.zipCode,
+            timezone=schema.hub.timezone,
+            location_type=schema.hub.location.type,
+            coordinates=", ".join(
+                [str(tmp) for tmp in schema.hub.location.coordinates]
+            ),  # long, lat
+            createdBy=schema.createdBy,
+            modifiedBy=schema.modifiedBy,
+        )
+
+    def to_schema(self):
+        data = {
+            "hub_id": self.hub_id,
+            "tid": self.tid,
+            "partner": self.partner,
+            "hub": {
+                "hubCode": self.hubCode,
+                "hubName": self.hubName,
+                "hubType": self.hubType,
+                "primaryHubId": self.primaryHubId,
+                "addr1": self.addr1,
+                "addr2": self.addr2,
+                "city": self.city,
+                "BuhmId": self.BuhmId,
+                "countryCode": self.countryCode,
+                "locality": self.locality,
+                "serviceStatus": self.serviceStatus,
+                "state": self.state,
+                "zipCode": self.zipCode,
+                "timezone": self.timezone,
+                "location": {
+                    "type": self.location_type,
+                    "coordinates": self.coordinates,
+                },
+            },
+            "createdBy": self.createdBy,
+            "modifiedBy": self.modifiedBy,
+        }
+        return schemas.ComcastInDb(**data)
+
+
 class Spatial(Base):
     __tablename__ = "spatial"
 
@@ -377,6 +466,7 @@ class Transaction(Base):
     tid = Column(String(length=250), nullable=False, unique=True)
     order_status = Column(String(length=250), nullable=False)
     order_type = Column(String(length=250), nullable=False)
+    source_api = Column(String(length=250), nullable=True)
 
     created_by = Column(String(length=250), nullable=True)
     modified_by = Column(String(length=250), nullable=True)
@@ -386,6 +476,7 @@ class Transaction(Base):
     # Define the relationship with Nlyte (many-to-one from Nlyte to Transaction based on order_id)
     nlytes = relationship("Nlyte", back_populates="transaction")
     spatials = relationship("Spatial", back_populates="transaction")
+    customs = relationship("Custom", back_populates="transaction")
     comcasts = relationship("Comcast", back_populates="transaction")
 
     @classmethod
@@ -396,6 +487,7 @@ class Transaction(Base):
             tid=schema.tid,
             order_status=schema.order_status,
             order_type=schema.order_type,
+            source_api=schema.source_api,
             created_by=schema.created_by,
             modified_by=schema.modified_by,
         )
@@ -406,6 +498,8 @@ class Transaction(Base):
             tmp.count = len(self.nlytes)
         elif self.spatials:
             tmp.count = len(self.spatials)
+        elif self.customs:
+            tmp.count = len(self.customs)
         elif self.comcasts:
             tmp.count = len(self.comcasts)
         else:
